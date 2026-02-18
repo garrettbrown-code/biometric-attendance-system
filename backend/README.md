@@ -65,6 +65,12 @@ This project is intended as a **portfolio / educational** demonstration of backe
 
 ---
 
+## Initialize Database
+
+python -m app.db.init_db
+
+---
+
 ## Setup (WSL / Ubuntu)
 
 ### 1) Create and activate a virtual environment
