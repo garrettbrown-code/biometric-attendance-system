@@ -173,6 +173,29 @@ def get_session_for_date(db: sqlite3.Connection, *, code: str, on_date: str) -> 
     return SessionRow(id=row["fld_se_id_pk"], code=row["fld_se_code_fk"], session_date=row["fld_se_date"], session_time=row["fld_se_time"])
 
 
+def get_class_by_code(db: sqlite3.Connection, *, code: str) -> Optional[dict[str, Any]]:
+    """
+    Returns class info as a dict:
+    {code, professor_euid, lat, lon, start_date, end_date}
+    """
+    cur = db.execute(
+        """
+        SELECT
+            fld_ci_code_pk AS code,
+            fld_ci_euid AS professor_euid,
+            fld_ci_lat AS lat,
+            fld_ci_lon AS lon,
+            fld_ci_start_date AS start_date,
+            fld_ci_end_date AS end_date
+        FROM tbl_class_info
+        WHERE fld_ci_code_pk = ?
+        """,
+        (code,),
+    )
+    row = cur.fetchone()
+    return dict(row) if row else None
+
+
 def get_class_location(db: sqlite3.Connection, *, code: str) -> Optional[tuple[float, float]]:
     cur = db.execute(
         "SELECT fld_ci_lat, fld_ci_lon FROM tbl_class_info WHERE fld_ci_code_pk = ?",
