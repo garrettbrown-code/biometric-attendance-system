@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from waitress import serve
 
-from app import create_app
+from app.factory import create_app
 
 
 def main() -> None:
