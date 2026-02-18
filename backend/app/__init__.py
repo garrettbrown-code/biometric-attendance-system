@@ -5,6 +5,7 @@ from flask import Flask, jsonify
 from dotenv import load_dotenv
 
 from app.config import Config
+from app.db.connection import close_db
 
 
 def _configure_logging(level_name: str) -> None:
@@ -24,6 +25,8 @@ def create_app() -> Flask:
 
     app = Flask(__name__)
     app.config["APP_CONFIG"] = cfg  # store for easy access
+
+    app.teardown_appcontext(close_db)
 
     # Minimal route so you can immediately verify the server works.
     @app.get("/health")

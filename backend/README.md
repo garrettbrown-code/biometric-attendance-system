@@ -54,6 +54,17 @@ This project is intended as a **portfolio / educational** demonstration of backe
 
 ---
 
+## System Requirements
+
+- Python 3.11 or 3.12
+- SQLite (included with Python standard library)
+- On Ubuntu/WSL (for face_recognition):
+    -cmake
+    -build-essential
+    -python3-dev
+
+---
+
 ## Setup (WSL / Ubuntu)
 
 ### 1) Create and activate a virtual environment
