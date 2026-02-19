@@ -1,0 +1,15 @@
+services:
+  attendance-api:
+    build: .
+    container_name: attendance-api
+    ports:
+      - "8000:8000"
+    environment:
+      FLASK_ENV: production
+      LOG_LEVEL: INFO
+      DATABASE_PATH: /app/data/attendance.db
+      USER_DATA_DIR: /app/data/users
+      MAX_DISTANCE_FEET: 30
+      TIME_WINDOW_MINUTES: 30
+    volumes:
+      - ./data:/app/data
