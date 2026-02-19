@@ -4,10 +4,9 @@ import base64
 import re
 from typing import Any
 
-
 # Strict formats (lowercase only)
-EUID_RE = re.compile(r"^[a-z]{3}\d{4}$")                 # gdb2356
-CLASS_CODE_RE = re.compile(r"^[a-z]{4}_\d{4}_\d{3}$")    # csce_4900_500
+EUID_RE = re.compile(r"^[a-z]{3}\d{4}$")  # gdb2356
+CLASS_CODE_RE = re.compile(r"^[a-z]{4}_\d{4}_\d{3}$")  # csce_4900_500
 
 WEEKDAYS = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
 

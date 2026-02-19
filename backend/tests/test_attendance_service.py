@@ -30,7 +30,9 @@ def test_add_attendance_class_missing(mock_get_class_by_code, tmp_path: Path) ->
 
 @patch("app.services.attendance_service.repository.get_session_for_date")
 @patch("app.services.attendance_service.repository.get_class_by_code")
-def test_add_attendance_no_class_today(mock_get_class_by_code, mock_get_session, tmp_path: Path) -> None:
+def test_add_attendance_no_class_today(
+    mock_get_class_by_code, mock_get_session, tmp_path: Path
+) -> None:
     mock_get_class_by_code.return_value = {"lat": 33.0, "lon": -97.0}
     mock_get_session.return_value = None
 
@@ -87,7 +89,9 @@ def test_add_attendance_success(
 
 @patch("app.services.attendance_service.repository.get_session_for_date")
 @patch("app.services.attendance_service.repository.get_class_by_code")
-def test_add_attendance_outside_time_window(mock_get_class_by_code, mock_get_session, tmp_path: Path) -> None:
+def test_add_attendance_outside_time_window(
+    mock_get_class_by_code, mock_get_session, tmp_path: Path
+) -> None:
     mock_get_class_by_code.return_value = {"lat": 33.0, "lon": -97.0}
 
     # Session time far in the past (over 30 min)

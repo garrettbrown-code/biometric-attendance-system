@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from app.factory import create_app
 from app.config import Config
+from app.factory import create_app
 
 
 @pytest.fixture

@@ -22,22 +22,28 @@ def test_within_distance_true_when_inside_threshold() -> None:
     class_loc = (33.214, -97.133)
     student_loc = (33.21401, -97.13301)
 
-    assert is_within_distance(
-        student_loc,
-        class_loc,
-        max_distance_feet=100,
-    ) is True
+    assert (
+        is_within_distance(
+            student_loc,
+            class_loc,
+            max_distance_feet=100,
+        )
+        is True
+    )
 
 
 def test_within_distance_false_when_outside_threshold() -> None:
     class_loc = (33.214, -97.133)
     student_loc = (34.214, -97.133)  # ~69 miles away
 
-    assert is_within_distance(
-        student_loc,
-        class_loc,
-        max_distance_feet=100,
-    ) is False
+    assert (
+        is_within_distance(
+            student_loc,
+            class_loc,
+            max_distance_feet=100,
+        )
+        is False
+    )
 
 
 def test_boundary_condition_is_inclusive() -> None:
@@ -54,8 +60,11 @@ def test_boundary_condition_is_inclusive() -> None:
     # Use computed distance as threshold
     assert math.isclose(distance, distance_feet(class_loc, student_loc))
 
-    assert is_within_distance(
-        student_loc,
-        class_loc,
-        max_distance_feet=distance,
-    ) is True
+    assert (
+        is_within_distance(
+            student_loc,
+            class_loc,
+            max_distance_feet=distance,
+        )
+        is True
+    )

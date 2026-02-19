@@ -71,6 +71,12 @@ python -m app.db.init_db
 
 ---
 
+## Run
+
+make check
+
+---
+
 ## Setup (WSL / Ubuntu)
 
 ### 1) Create and activate a virtual environment

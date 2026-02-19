@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime, timedelta, date
-from typing import Any, Optional
-
 import sqlite3
-
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from typing import Any
 
 WEEKDAYS = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
 
@@ -26,6 +24,7 @@ def _row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
 # Existence checks
 # -------------------------
 
+
 def class_exists(db: sqlite3.Connection, code: str) -> bool:
     cur = db.execute("SELECT 1 FROM tbl_class_info WHERE fld_ci_code_pk = ? LIMIT 1", (code,))
     return cur.fetchone() is not None
@@ -42,6 +41,7 @@ def professor_exists_for_class(db: sqlite3.Connection, code: str, professor_euid
 # -------------------------
 # Class creation
 # -------------------------
+
 
 def insert_class_info(
     db: sqlite3.Connection,
@@ -142,7 +142,9 @@ def add_class(
             end_date=end_date,
         )
         insert_schedule(db, code=code, times=times)
-        created = generate_sessions(db, code=code, start_date=start_date, end_date=end_date, times=times)
+        created = generate_sessions(
+            db, code=code, start_date=start_date, end_date=end_date, times=times
+        )
         db.commit()
         return created
     except Exception:
@@ -154,7 +156,8 @@ def add_class(
 # Attendance / sessions
 # -------------------------
 
-def get_session_for_date(db: sqlite3.Connection, *, code: str, on_date: str) -> Optional[SessionRow]:
+
+def get_session_for_date(db: sqlite3.Connection, *, code: str, on_date: str) -> SessionRow | None:
     """
     Fetches session for a class on a specific date (YYYY-MM-DD).
     Returns None if no session.
@@ -170,10 +173,15 @@ def get_session_for_date(db: sqlite3.Connection, *, code: str, on_date: str) -> 
     row = cur.fetchone()
     if row is None:
         return None
-    return SessionRow(id=row["fld_se_id_pk"], code=row["fld_se_code_fk"], session_date=row["fld_se_date"], session_time=row["fld_se_time"])
+    return SessionRow(
+        id=row["fld_se_id_pk"],
+        code=row["fld_se_code_fk"],
+        session_date=row["fld_se_date"],
+        session_time=row["fld_se_time"],
+    )
 
 
-def get_class_by_code(db: sqlite3.Connection, *, code: str) -> Optional[dict[str, Any]]:
+def get_class_by_code(db: sqlite3.Connection, *, code: str) -> dict[str, Any] | None:
     """
     Returns class info as a dict:
     {code, professor_euid, lat, lon, start_date, end_date}
@@ -196,7 +204,7 @@ def get_class_by_code(db: sqlite3.Connection, *, code: str) -> Optional[dict[str
     return dict(row) if row else None
 
 
-def get_class_location(db: sqlite3.Connection, *, code: str) -> Optional[tuple[float, float]]:
+def get_class_location(db: sqlite3.Connection, *, code: str) -> tuple[float, float] | None:
     cur = db.execute(
         "SELECT fld_ci_lat, fld_ci_lon FROM tbl_class_info WHERE fld_ci_code_pk = ?",
         (code,),
@@ -207,7 +215,9 @@ def get_class_location(db: sqlite3.Connection, *, code: str) -> Optional[tuple[f
     return (float(row["fld_ci_lat"]), float(row["fld_ci_lon"]))
 
 
-def upsert_attendance(db: sqlite3.Connection, *, session_id: int, student_euid: str, attended: int) -> None:
+def upsert_attendance(
+    db: sqlite3.Connection, *, session_id: int, student_euid: str, attended: int
+) -> None:
     """
     attended: 1 present, 0 absent
     """
@@ -226,6 +236,7 @@ def upsert_attendance(db: sqlite3.Connection, *, session_id: int, student_euid: 
 # -------------------------
 # Query endpoints
 # -------------------------
+
 
 def get_student_attendance(db: sqlite3.Connection, *, student_euid: str) -> list[dict[str, Any]]:
     cur = db.execute(

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -8,7 +8,7 @@ from pydantic import BaseModel
 class ErrorResponse(BaseModel):
     status: str = "error"
     error: str
-    details: Optional[Any] = None
+    details: Any | None = None
 
 
 class SuccessResponse(BaseModel):

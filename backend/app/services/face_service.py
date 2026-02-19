@@ -4,9 +4,9 @@ import base64
 import io
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 from PIL import Image
+
 
 def _fr():
     """
@@ -14,21 +14,22 @@ def _fr():
     Tests can patch this to avoid importing the real dependency.
     """
     import face_recognition
+
     return face_recognition
 
 
 @dataclass(frozen=True)
 class FaceMatchResult:
     status: str  # "success" | "error"
-    error: Optional[str] = None
+    error: str | None = None
 
 
 def _decode_base64_to_bytes(photo_b64: str) -> bytes:
     # Pydantic already validates base64, but keep this defensive.
     try:
         return base64.b64decode(photo_b64, validate=True)
-    except Exception:
-        raise ValueError("photo must be valid base64")
+    except Exception as e:
+        raise ValueError("photo must be valid base64") from e
 
 
 def _load_image_from_bytes(image_bytes: bytes, fr):

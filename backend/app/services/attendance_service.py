@@ -3,12 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from app.db import repository
 from app.services.face_service import verify_face_match
 from app.services.geo_service import distance_feet
-
 
 DEFAULT_MAX_DISTANCE_FEET = 30.0
 DEFAULT_TIME_WINDOW_MINUTES = 30
@@ -17,7 +15,7 @@ DEFAULT_TIME_WINDOW_MINUTES = 30
 @dataclass(frozen=True)
 class AttendanceResult:
     status: str  # "success" | "error"
-    error: Optional[str] = None
+    error: str | None = None
 
 
 def add_attendance(
@@ -67,7 +65,9 @@ def add_attendance(
         tolerance=face_tolerance,
     )
     if face_result.status != "success":
-        return AttendanceResult(status="error", error=face_result.error or "Face verification failed")
+        return AttendanceResult(
+            status="error", error=face_result.error or "Face verification failed"
+        )
 
     # 6) Persist
     repository.upsert_attendance(db, session_id=session.id, student_euid=euid, attended=1)

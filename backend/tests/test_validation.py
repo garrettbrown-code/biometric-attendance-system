@@ -26,11 +26,11 @@ def test_valid_add_class_request_passes() -> None:
 @pytest.mark.parametrize(
     "bad_code",
     [
-        "CSCE_4900_500",    # uppercase
-        "csce4900_500",     # missing underscore
-        "csce_490_500",     # wrong digits
-        "csc_4900_500",     # wrong letters count
-        "csce_4900_50",     # wrong last digits count
+        "CSCE_4900_500",  # uppercase
+        "csce4900_500",  # missing underscore
+        "csce_490_500",  # wrong digits
+        "csc_4900_500",  # wrong letters count
+        "csce_4900_50",  # wrong last digits count
     ],
 )
 def test_class_code_format_rejected(bad_code: str) -> None:
@@ -49,11 +49,11 @@ def test_class_code_format_rejected(bad_code: str) -> None:
 @pytest.mark.parametrize(
     "bad_euid",
     [
-        "gdb235",      # too short
-        "gdb23567",    # too long
-        "gd2356",      # only 2 letters
-        "GDB2356",     # uppercase
-        "gdb23a6",     # letter in digits
+        "gdb235",  # too short
+        "gdb23567",  # too long
+        "gd2356",  # only 2 letters
+        "GDB2356",  # uppercase
+        "gdb23a6",  # letter in digits
     ],
 )
 def test_euid_format_rejected(bad_euid: str) -> None:

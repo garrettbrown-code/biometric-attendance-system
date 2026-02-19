@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import logging
-from flask import Flask
+
 from dotenv import load_dotenv
+from flask import Flask
 
 from app.config import Config
 from app.db.connection import close_db
-
 from app.routes import bp as api_bp
 
 

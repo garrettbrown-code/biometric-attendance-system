@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from haversine import haversine, Unit
+from haversine import Unit, haversine
 
 
 def distance_feet(

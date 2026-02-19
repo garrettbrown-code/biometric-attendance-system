@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
-from typing import Optional
 
 from flask import current_app, g
 
@@ -30,7 +29,7 @@ def get_db() -> sqlite3.Connection:
     return g.db
 
 
-def close_db(_: Optional[BaseException] = None) -> None:
+def close_db(_: BaseException | None = None) -> None:
     """
     Closes the per-request SQLite connection (if present).
     Called automatically by Flask appcontext teardown.
