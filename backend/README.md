@@ -77,6 +77,13 @@ make check
 
 ---
 
+## Run with Docker
+
+docker build -t attendance-api .
+docker run -p 8000:8000 attendance-api
+
+---
+
 ## Setup (WSL / Ubuntu)
 
 ### 1) Create and activate a virtual environment
