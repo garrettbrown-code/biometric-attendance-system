@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import logging
-from flask import Flask, jsonify
+from flask import Flask
 from dotenv import load_dotenv
 
 from app.config import Config
 from app.db.connection import close_db
+
+from app.routes import bp as api_bp
 
 
 def _configure_logging(level_name: str) -> None:
@@ -23,11 +25,8 @@ def create_app() -> Flask:
 
     app = Flask(__name__)
     app.config["APP_CONFIG"] = cfg
+    app.register_blueprint(api_bp)
 
     app.teardown_appcontext(close_db)
-
-    @app.get("/health")
-    def health():
-        return jsonify({"status": "ok"}), 200
 
     return app
