@@ -39,6 +39,65 @@ def professor_exists_for_class(db: sqlite3.Connection, code: str, professor_euid
 
 
 # -------------------------
+# Student enrollment
+# -------------------------
+
+def student_is_enrolled(db: sqlite3.Connection, *, student_euid: str, code: str) -> bool:
+    cur = db.execute(
+        """
+        SELECT 1
+        FROM tbl_students
+        WHERE fld_st_euid = ? AND fld_st_code_fk = ?
+        LIMIT 1
+        """,
+        (student_euid, code),
+    )
+    return cur.fetchone() is not None
+
+
+def enroll_student_in_class(db: sqlite3.Connection, *, student_euid: str, code: str) -> None:
+    """
+    Enroll a student in a class.
+    Raises:
+      - ValueError("Class not found") if class code doesn't exist
+      - ValueError("Already enrolled") if enrollment row already exists
+    """
+    if not class_exists(db, code):
+        raise ValueError("Class not found")
+
+    if student_is_enrolled(db, student_euid=student_euid, code=code):
+        raise ValueError("Already enrolled")
+
+    db.execute(
+        "INSERT INTO tbl_students (fld_st_code_fk, fld_st_euid) VALUES (?, ?)",
+        (code, student_euid),
+    )
+
+
+def get_student_classes(db: sqlite3.Connection, *, student_euid: str) -> list[dict[str, Any]]:
+    """
+    Returns class list for a student (includes professor + date range + location).
+    """
+    cur = db.execute(
+        """
+        SELECT
+          i.fld_ci_code_pk AS code,
+          i.fld_ci_euid AS professor_euid,
+          i.fld_ci_start_date AS start_date,
+          i.fld_ci_end_date AS end_date,
+          i.fld_ci_lat AS lat,
+          i.fld_ci_lon AS lon
+        FROM tbl_students st
+        JOIN tbl_class_info i ON st.fld_st_code_fk = i.fld_ci_code_pk
+        WHERE st.fld_st_euid = ?
+        ORDER BY i.fld_ci_code_pk ASC
+        """,
+        (student_euid,),
+    )
+    return [dict(row) for row in cur.fetchall()]
+
+
+# -------------------------
 # Class creation
 # -------------------------
 

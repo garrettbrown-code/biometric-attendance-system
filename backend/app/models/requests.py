@@ -66,6 +66,15 @@ class AddClassRequest(BaseModel):
         return self
 
 
+class EnrollInClassRequest(BaseModel):
+    code: str = Field(..., description="abcd_1234_123")
+
+    @field_validator("code")
+    @classmethod
+    def _code(cls, v: str) -> str:
+        return validate_class_code(v)
+
+
 class AddAttendanceRequest(BaseModel):
     code: str
     euid: str

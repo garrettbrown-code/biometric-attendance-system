@@ -13,6 +13,7 @@ from app.db.connection import get_db
 from app.models.requests import (
     AddAttendanceRequest,
     AddClassRequest,
+    EnrollInClassRequest,
     GetClassAttendanceRequest,
     GetClassScheduleRequest,
     GetProfessorClassCodesRequest,
@@ -228,6 +229,54 @@ def post_attendance():
     )
     # Keep it 400 for now; later we can map specific errors to 401/403/404/etc.
     return _error(400, result.error or "Attendance rejected")
+
+
+@bp.post("/students/me/classes")
+@jwt_required(role="student")
+def enroll_in_class():
+    """
+    Enroll the authenticated student in a class by code.
+    """
+    try:
+        payload = EnrollInClassRequest.model_validate(request.get_json())
+    except ValidationError as e:
+        return _validation_error(e)
+
+    db = get_db()
+    student_euid = g.current_user
+
+    try:
+        repository.enroll_student_in_class(db, student_euid=student_euid, code=payload.code)
+        db.commit()
+    except ValueError as e:
+        msg = str(e)
+        if msg == "Class not found":
+            return _error(404, msg)
+        if msg == "Already enrolled":
+            return _error(409, msg)
+        return _error(400, msg)
+
+    return jsonify({"status": "success", "request_id": _request_id()}), 201
+
+
+@bp.get("/students/me/classes")
+@jwt_required(role="student")
+def get_my_classes():
+    db = get_db()
+    rows = repository.get_student_classes(db, student_euid=g.current_user)
+    return jsonify({"status": "success", "classes": rows, "request_id": _request_id()}), 200
+
+
+@bp.get("/students/me/attendance")
+@jwt_required(role="student")
+def get_my_attendance():
+    """
+    Mobile-friendly alias for the authenticated student's attendance history.
+    """
+    db = get_db()
+    rows = repository.get_student_attendance(db, student_euid=g.current_user)
+    return jsonify({"status": "success", "attendance": rows, "request_id": _request_id()}), 200
+
 
 
 @bp.get("/students/<euid>/attendance")

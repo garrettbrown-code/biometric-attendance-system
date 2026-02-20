@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS tbl_students (
     fld_st_euid TEXT NOT NULL,
     PRIMARY KEY (fld_st_code_fk, fld_st_euid),
     FOREIGN KEY (fld_st_code_fk) REFERENCES tbl_class_info(fld_ci_code_pk) ON DELETE CASCADE,
+    FOREIGN KEY (fld_st_euid) REFERENCES tbl_users(fld_us_euid) ON DELETE CASCADE,
     CONSTRAINT student_euid_length CHECK(length(fld_st_euid) <= 14)
 );
 
@@ -72,3 +73,6 @@ ON tbl_class_info(fld_ci_euid);
 
 CREATE INDEX IF NOT EXISTS idx_attendance_euid
 ON tbl_attendance(fld_at_euid_fk);
+
+CREATE INDEX IF NOT EXISTS idx_students_euid
+ON tbl_students(fld_st_euid);
