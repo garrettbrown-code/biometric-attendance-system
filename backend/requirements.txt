@@ -5,6 +5,7 @@ Pillow>=10.0.0
 haversine>=2.8.0
 python-dotenv>=1.0.0
 pydantic>=2.0.0
+flask-swagger-ui>=4.11.1
 
 #dev
 pytest>=8.0.0

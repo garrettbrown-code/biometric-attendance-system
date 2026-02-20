@@ -8,6 +8,7 @@ from flask import Flask
 from app.config import Config
 from app.db.connection import close_db
 from app.routes import bp as api_bp
+from app.openapi import register_openapi
 
 
 def _configure_logging(level_name: str) -> None:
@@ -26,6 +27,7 @@ def create_app() -> Flask:
     app = Flask(__name__)
     app.config["APP_CONFIG"] = cfg
     app.register_blueprint(api_bp)
+    register_openapi(app)
 
     app.teardown_appcontext(close_db)
 
