@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import json
 import uuid
 
 from flask import Blueprint, current_app, g, jsonify, request
@@ -34,13 +35,38 @@ def _request_id() -> str:
     return getattr(g, "request_id", "")
 
 
+def _json_safe(value):
+    """
+    Convert arbitrary values into JSON-serializable values.
+    Pydantic error contexts can include exception objects (e.g., ValueError).
+    """
+    try:
+        json.dumps(value)
+        return value
+    except TypeError:
+        return str(value)
+
+
+def _normalize_pydantic_errors(errors: list[dict]) -> list[dict]:
+    normalized: list[dict] = []
+    for err in errors:
+        err = dict(err)
+        if "ctx" in err and isinstance(err["ctx"], dict):
+            err["ctx"] = {k: _json_safe(v) for k, v in err["ctx"].items()}
+        # Defensive: sometimes 'input' can be non-serializable too
+        if "input" in err:
+            err["input"] = _json_safe(err["input"])
+        normalized.append(err)
+    return normalized
+
+
 def _validation_error(e: ValidationError):
     return (
         jsonify(
             {
                 "status": "error",
                 "error": "Validation error",
-                "details": e.errors(),
+                "details": _normalize_pydantic_errors(e.errors()),
                 "request_id": _request_id(),
             }
         ),
@@ -108,7 +134,7 @@ def refresh():
     tokens = refresh_access_token(refresh_token=refresh_token, cfg=cfg)
 
     if not tokens:
-         return _error(401, "Invalid refresh token")
+        return _error(401, "Invalid refresh token")
 
     return jsonify({"status": "success", **tokens}), 200
 
@@ -118,6 +144,8 @@ def refresh():
 def post_class():
     try:
         payload = AddClassRequest.model_validate(request.get_json())
+        if payload.euid != g.current_user:
+            return _error(403, "Forbidden")
     except ValidationError as e:
         return _validation_error(e)
 
@@ -163,6 +191,8 @@ def post_class():
 def post_attendance():
     try:
         payload = AddAttendanceRequest.model_validate(request.get_json())
+        if payload.euid != g.current_user:
+            return _error(403, "Forbidden")
     except ValidationError as e:
         return _validation_error(e)
 
@@ -205,6 +235,8 @@ def post_attendance():
 def get_student_attendance(euid: str):
     try:
         payload = GetStudentAttendanceRequest.model_validate({"euid": euid})
+        if g.current_user != euid:
+            return _error(403, "Forbidden")
     except ValidationError as e:
         return _validation_error(e)
 
@@ -238,8 +270,10 @@ def get_class_schedule(code: str):
 
 
 @bp.get("/professors/<euid>/schedule")
-@jwt_required(role="student")
+@jwt_required(role="professor")
 def get_professor_schedule(euid: str):
+    if g.current_user != euid:
+        return _error(403, "Forbidden")
     try:
         payload = GetProfessorScheduleRequest.model_validate({"euid": euid})
     except ValidationError as e:
@@ -251,7 +285,10 @@ def get_professor_schedule(euid: str):
 
 
 @bp.get("/professors/<euid>/classes")
+@jwt_required(role="professor")
 def get_professor_class_codes(euid: str):
+    if g.current_user != euid:
+        return _error(403, "Forbidden")
     try:
         payload = GetProfessorClassCodesRequest.model_validate({"euid": euid})
     except ValidationError as e:
