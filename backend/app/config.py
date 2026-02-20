@@ -42,6 +42,7 @@ class Config:
     jwt_secret_key: str = os.getenv("JWT_SECRET_KEY", "test-secret-32-bytes-minimum-length!!")
     jwt_algorithm: str = os.getenv("JWT_ALGORITHM", "HS256")
     jwt_exp_minutes: int = _get_env_int("JWT_EXP_MINUTES", 60)
+    jwt_refresh_exp_days: int = _get_env_int("JWT_REFRESH_EXP_DAYS", 7)
 
     # Face recognition knobs (optional)
     # face_tolerance: float = float(os.getenv("FACE_TOLERANCE", "0.6"))

@@ -50,12 +50,14 @@ def client(app_with_auth):
     return app_with_auth.test_client()
 
 
-def _login(client, euid: str, password: str) -> str:
+def _login(client, euid: str, password: str) -> dict[str, str]:
     resp = client.post("/auth/login", json={"euid": euid, "password": password})
     assert resp.status_code == 200, resp.json
-    token = resp.json.get("access_token")
-    assert token
-    return token
+    access = resp.json.get("access_token")
+    refresh = resp.json.get("refresh_token")
+    assert access
+    assert refresh
+    return {"access_token": access, "refresh_token": refresh}
 
 
 def test_login_success_returns_token(client) -> None:
@@ -63,6 +65,7 @@ def test_login_success_returns_token(client) -> None:
     assert resp.status_code == 200
     assert resp.json["status"] == "success"
     assert resp.json["access_token"]
+    assert resp.json["refresh_token"]
 
 
 def test_login_invalid_password_rejected(client) -> None:
@@ -79,12 +82,12 @@ def test_protected_route_without_token_returns_401(client) -> None:
 
 
 def test_protected_route_wrong_role_returns_403(client) -> None:
-    student_token = _login(client, "stu1234", "password123")
+    tokens = _login(client, "stu1234", "password123")
 
     # /classes requires professor
     resp = client.post(
         "/classes",
-        headers={"Authorization": f"Bearer {student_token}"},
+        headers={"Authorization": f"Bearer {tokens['access_token']}"},
         json={
             "code": "csce_4900_500",
             "euid": "pro1234",
@@ -100,11 +103,11 @@ def test_protected_route_wrong_role_returns_403(client) -> None:
 
 
 def test_professor_can_create_class(client) -> None:
-    prof_token = _login(client, "pro1234", "password123")
+    tokens = _login(client, "pro1234", "password123")
 
     resp = client.post(
         "/classes",
-        headers={"Authorization": f"Bearer {prof_token}"},
+        headers={"Authorization": f"Bearer {tokens['access_token']}"},
         json={
             "code": "csce_4900_500",
             "euid": "pro1234",

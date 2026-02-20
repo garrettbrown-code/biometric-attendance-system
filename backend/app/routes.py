@@ -20,7 +20,7 @@ from app.models.requests import (
 )
 from app.services.attendance_service import add_attendance
 from app.auth.decorators import jwt_required
-from app.services.auth_service import authenticate_user
+from app.services.auth_service import authenticate_user, refresh_access_token
 
 bp = Blueprint("api", __name__)
 logger = logging.getLogger(__name__)
@@ -88,12 +88,29 @@ def login():
         return _error(400, "Missing credentials")
 
     cfg = _cfg()
-    token = authenticate_user(euid=euid, password=password, cfg=cfg)
+    tokens = authenticate_user(euid=euid, password=password, cfg=cfg)
 
-    if not token:
+    if not tokens:
         return _error(401, "Invalid credentials")
 
-    return jsonify({"status": "success", "access_token": token}), 200
+    return jsonify({"status": "success", **tokens}), 200
+
+
+@bp.post("/auth/refresh")
+def refresh():
+    data = request.get_json() or {}
+    refresh_token = data.get("refresh_token")
+
+    if not refresh_token:
+        return _error(400, "Missing refresh token")
+
+    cfg = _cfg()
+    tokens = refresh_access_token(refresh_token=refresh_token, cfg=cfg)
+
+    if not tokens:
+         return _error(401, "Invalid refresh token")
+
+    return jsonify({"status": "success", **tokens}), 200
 
 
 @bp.post("/classes")

@@ -54,6 +54,15 @@ CREATE TABLE IF NOT EXISTS tbl_users (
     fld_us_created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS tbl_refresh_tokens (
+    fld_rt_id_pk INTEGER PRIMARY KEY AUTOINCREMENT,
+    fld_rt_euid TEXT NOT NULL,
+    fld_rt_token TEXT UNIQUE NOT NULL,
+    fld_rt_expires_at TEXT NOT NULL,
+    fld_rt_revoked INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (fld_rt_euid) REFERENCES tbl_users(fld_us_euid) ON DELETE CASCADE
+);
+
 -- Helpful indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_sessions_code_date
 ON tbl_sessions(fld_se_code_fk, fld_se_date);
