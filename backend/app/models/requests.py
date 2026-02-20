@@ -10,6 +10,7 @@ from app.models.validation import (
     validate_class_code,
     validate_date_yyyymmdd,
     validate_euid,
+    validate_join_code,
     validate_location,
     validate_time_hhmmss,
 )
@@ -160,6 +161,48 @@ class AddUserRequest(BaseModel):
 
 class AddPhotoRequest(BaseModel):
     user_type: Literal["Student", "Professor"]
+    euid: str
+    photo: str
+
+    @field_validator("euid")
+    @classmethod
+    def _euid(cls, v: str) -> str:
+        return validate_euid(v)
+
+    @field_validator("photo")
+    @classmethod
+    def _photo(cls, v: str) -> str:
+        return validate_base64_image(v)
+
+
+class StudentEnrollRequest(BaseModel):
+    euid: str
+    code: str
+    join_code: str
+    photo: str
+
+    @field_validator("euid")
+    @classmethod
+    def _euid(cls, v: str) -> str:
+        return validate_euid(v)
+
+    @field_validator("code")
+    @classmethod
+    def _code(cls, v: str) -> str:
+        return validate_class_code(v)
+
+    @field_validator("join_code")
+    @classmethod
+    def _join_code(cls, v: str) -> str:
+        return validate_join_code(v)
+
+    @field_validator("photo")
+    @classmethod
+    def _photo(cls, v: str) -> str:
+        return validate_base64_image(v)
+
+
+class FaceLoginRequest(BaseModel):
     euid: str
     photo: str
 

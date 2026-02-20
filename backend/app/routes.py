@@ -4,6 +4,7 @@ import logging
 import json
 import uuid
 
+from datetime import datetime, timezone
 from flask import Blueprint, current_app, g, jsonify, request
 from pydantic import ValidationError
 
@@ -13,16 +14,23 @@ from app.db.connection import get_db
 from app.models.requests import (
     AddAttendanceRequest,
     AddClassRequest,
+    FaceLoginRequest,
     EnrollInClassRequest,
     GetClassAttendanceRequest,
     GetClassScheduleRequest,
     GetProfessorClassCodesRequest,
     GetProfessorScheduleRequest,
     GetStudentAttendanceRequest,
+    StudentEnrollRequest,
 )
 from app.services.attendance_service import add_attendance
 from app.auth.decorators import jwt_required
-from app.services.auth_service import authenticate_user, refresh_access_token
+from app.services.auth_service import (
+    authenticate_user,
+    enroll_student_with_join_code,
+    face_login_student,
+    refresh_access_token,
+)
 
 bp = Blueprint("api", __name__)
 logger = logging.getLogger(__name__)
@@ -151,6 +159,8 @@ def post_class():
         return _validation_error(e)
 
     db = get_db()
+    join_code = repository.generate_join_code()
+    join_code_created_at = datetime.now(timezone.utc).isoformat()
 
     try:
         created = repository.add_class(
@@ -162,6 +172,8 @@ def post_class():
             start_date=payload.start_date,
             end_date=payload.end_date,
             times=payload.times,
+            join_code=join_code,
+            join_code_created_at=join_code_created_at,
         )
     except ValueError as e:
         # e.g. "Class already exists"
@@ -182,9 +194,55 @@ def post_class():
         created,
     )
     return (
-        jsonify({"status": "success", "sessions_created": created, "request_id": _request_id()}),
+        jsonify(
+            {
+                "status": "success",
+                "sessions_created": created,
+                "join_code": join_code,
+                "request_id": _request_id(),
+            }
+        ),
         201,
     )
+
+
+@bp.post("/auth/enroll")
+def enroll():
+    try:
+        payload = StudentEnrollRequest.model_validate(request.get_json())
+    except ValidationError as e:
+        return _validation_error(e)
+
+    db = get_db()
+    cfg = _cfg()
+    tokens = enroll_student_with_join_code(
+        db=db,
+        cfg=cfg,
+        euid=payload.euid,
+        code=payload.code,
+        join_code=payload.join_code,
+        photo_b64=payload.photo,
+    )
+    if not tokens:
+        return _error(401, "Invalid join code or enrollment failed")
+
+    return jsonify({"status": "success", **tokens, "request_id": _request_id()}), 200
+
+
+@bp.post("/auth/face-login")
+def face_login():
+    try:
+        payload = FaceLoginRequest.model_validate(request.get_json())
+    except ValidationError as e:
+        return _validation_error(e)
+
+    db = get_db()
+    cfg = _cfg()
+    tokens = face_login_student(db=db, cfg=cfg, euid=payload.euid, photo_b64=payload.photo)
+    if not tokens:
+        return _error(401, "Face login failed")
+
+    return jsonify({"status": "success", **tokens, "request_id": _request_id()}), 200
 
 
 @bp.post("/attendance")
@@ -278,7 +336,7 @@ def get_my_attendance():
     return jsonify({"status": "success", "attendance": rows, "request_id": _request_id()}), 200
 
 
-
+# Legacy / Debug
 @bp.get("/students/<euid>/attendance")
 @jwt_required(role="student")
 def get_student_attendance(euid: str):

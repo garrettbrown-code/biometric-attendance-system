@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS tbl_class_info (
     fld_ci_lon REAL NOT NULL,
     fld_ci_start_date TEXT NOT NULL,      -- YYYY-MM-DD
     fld_ci_end_date TEXT NOT NULL,        -- YYYY-MM-DD
+    fld_ci_join_code TEXT NOT NULL,       -- short code students use to enroll
+    fld_ci_join_code_created_at TEXT NOT NULL,
     CONSTRAINT code_length CHECK(length(fld_ci_code_pk) <= 14),
     CONSTRAINT prof_euid_length CHECK(length(fld_ci_euid) <= 14)
 );

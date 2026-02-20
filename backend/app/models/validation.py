@@ -7,6 +7,7 @@ from typing import Any
 # Strict formats (lowercase only)
 EUID_RE = re.compile(r"^[a-z]{3}\d{4}$")  # gdb2356
 CLASS_CODE_RE = re.compile(r"^[a-z]{4}_\d{4}_\d{3}$")  # csce_4900_500
+JOIN_CODE_RE = re.compile(r"^[A-Z0-9]{6,12}$")  # e.g. 8 chars, uppercase letters+digits
 
 WEEKDAYS = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
 
@@ -72,3 +73,12 @@ def validate_base64_image(b64: str, *, max_bytes: int = 4_000_000) -> str:
         raise ValueError(f"photo is too large (> {max_bytes} bytes)")
 
     return b64
+
+
+def validate_join_code(code: str) -> str:
+    code = code.strip()
+    if code != code.upper():
+        raise ValueError("join_code must be uppercase")
+    if not JOIN_CODE_RE.fullmatch(code):
+        raise ValueError("join_code must be 6-12 chars (A-Z, 0-9)")
+    return code

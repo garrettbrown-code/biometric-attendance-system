@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
+import secrets
+import string
 
 WEEKDAYS = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
 
@@ -37,6 +39,48 @@ def professor_exists_for_class(db: sqlite3.Connection, code: str, professor_euid
     )
     return cur.fetchone() is not None
 
+
+def generate_join_code(length: int = 8) -> str:
+    alphabet = string.ascii_uppercase + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+def _now_iso_utc() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def get_join_code(db: sqlite3.Connection, *, code: str) -> dict[str, Any] | None:
+    cur = db.execute(
+        """
+        SELECT fld_ci_join_code AS join_code, fld_ci_join_code_created_at AS created_at
+        FROM tbl_class_info
+        WHERE fld_ci_code_pk = ?
+        """,
+        (code,),
+    )
+    row = cur.fetchone()
+    return dict(row) if row else None
+
+def verify_join_code(db: sqlite3.Connection, *, code: str, join_code: str) -> bool:
+    cur = db.execute(
+        """
+        SELECT 1
+        FROM tbl_class_info
+        WHERE fld_ci_code_pk = ? AND fld_ci_join_code = ?
+        LIMIT 1
+        """,
+        (code, join_code),
+    )
+    return cur.fetchone() is not None
+
+def enroll_student(db: sqlite3.Connection, *, code: str, student_euid: str) -> None:
+    db.execute(
+        """
+        INSERT OR IGNORE INTO tbl_students (fld_st_code_fk, fld_st_euid)
+        VALUES (?, ?)
+        """,
+        (code, student_euid),
+    )
 
 # -------------------------
 # Student enrollment
@@ -111,14 +155,29 @@ def insert_class_info(
     lon: float,
     start_date: str,
     end_date: str,
+    join_code: str | None = None,
+    join_code_created_at: str | None = None,
 ) -> None:
+    """
+    Inserts a row into tbl_class_info.
+
+    Backward compatible: join_code fields default automatically so tests that
+    don't care about enrollment don't have to pass them.
+    """
+    if join_code is None:
+        join_code = generate_join_code()
+    if join_code_created_at is None:
+        join_code_created_at = _now_iso_utc()
+
     db.execute(
         """
         INSERT INTO tbl_class_info (
-            fld_ci_code_pk, fld_ci_euid, fld_ci_lat, fld_ci_lon, fld_ci_start_date, fld_ci_end_date
-        ) VALUES (?, ?, ?, ?, ?, ?)
+            fld_ci_code_pk, fld_ci_euid, fld_ci_lat, fld_ci_lon, fld_ci_start_date, fld_ci_end_date,
+            fld_ci_join_code, fld_ci_join_code_created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (code, professor_euid, lat, lon, start_date, end_date),
+        (code, professor_euid, lat, lon, start_date, end_date, join_code, join_code_created_at),
     )
 
 
@@ -182,6 +241,8 @@ def add_class(
     start_date: str,
     end_date: str,
     times: dict[str, str],
+    join_code: str,
+    join_code_created_at: str,
 ) -> int:
     """
     Convenience transaction wrapper for adding a class, schedule, and sessions.
@@ -199,6 +260,8 @@ def add_class(
             lon=lon,
             start_date=start_date,
             end_date=end_date,
+            join_code=join_code,
+            join_code_created_at=join_code_created_at,
         )
         insert_schedule(db, code=code, times=times)
         created = generate_sessions(

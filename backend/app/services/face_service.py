@@ -50,6 +50,18 @@ def _pil_to_jpeg_bytes(img: Image.Image) -> bytes:
     return buf.getvalue()
 
 
+def save_reference_image(*, photo_b64: str, dest_path: Path) -> None:
+    """
+    Saves a normalized JPEG reference image for later face verification.
+    """
+    image_bytes = _decode_base64_to_bytes(photo_b64)
+    img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    jpeg_bytes = _pil_to_jpeg_bytes(img)
+
+    dest_path.parent.mkdir(parents=True, exist_ok=True)
+    dest_path.write_bytes(jpeg_bytes)
+
+
 def _get_first_encoding(image_arr, fr):
     """
     Returns the first face encoding or None.

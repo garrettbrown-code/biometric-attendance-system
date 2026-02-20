@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 import pytest
 
 from app.config import Config
@@ -12,6 +13,7 @@ def app(tmp_path: Path):
     """
     Shared test app with seeded users for auth/RBAC tests.
     """
+    os.environ["USER_DATA_DIR"] = str(tmp_path / "users")
     app = create_app()
     app.config["TESTING"] = True
 
