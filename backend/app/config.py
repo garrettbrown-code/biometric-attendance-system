@@ -35,6 +35,14 @@ class Config:
     # User storage
     user_data_dir: Path = Path(os.getenv("USER_DATA_DIR", "./data/users")).resolve()
 
+    # User storage
+    user_data_dir: Path = Path(os.getenv("USER_DATA_DIR", "./data/users")).resolve()
+
+    # Auth
+    jwt_secret_key: str = os.getenv("JWT_SECRET_KEY", "test-secret-32-bytes-minimum-length!!")
+    jwt_algorithm: str = os.getenv("JWT_ALGORITHM", "HS256")
+    jwt_exp_minutes: int = _get_env_int("JWT_EXP_MINUTES", 60)
+
     # Face recognition knobs (optional)
     # face_tolerance: float = float(os.getenv("FACE_TOLERANCE", "0.6"))
 

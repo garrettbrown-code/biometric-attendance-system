@@ -19,6 +19,8 @@ from app.models.requests import (
     GetStudentAttendanceRequest,
 )
 from app.services.attendance_service import add_attendance
+from app.auth.decorators import jwt_required
+from app.services.auth_service import authenticate_user
 
 bp = Blueprint("api", __name__)
 logger = logging.getLogger(__name__)
@@ -76,7 +78,26 @@ def health():
     return jsonify({"status": "ok", "request_id": _request_id()}), 200
 
 
+@bp.post("/auth/login")
+def login():
+    data = request.get_json() or {}
+    euid = data.get("euid")
+    password = data.get("password")
+
+    if not euid or not password:
+        return _error(400, "Missing credentials")
+
+    cfg = _cfg()
+    token = authenticate_user(euid=euid, password=password, cfg=cfg)
+
+    if not token:
+        return _error(401, "Invalid credentials")
+
+    return jsonify({"status": "success", "access_token": token}), 200
+
+
 @bp.post("/classes")
+@jwt_required(role="professor")
 def post_class():
     try:
         payload = AddClassRequest.model_validate(request.get_json())
@@ -121,6 +142,7 @@ def post_class():
 
 
 @bp.post("/attendance")
+@jwt_required(role="student")
 def post_attendance():
     try:
         payload = AddAttendanceRequest.model_validate(request.get_json())
@@ -162,6 +184,7 @@ def post_attendance():
 
 
 @bp.get("/students/<euid>/attendance")
+@jwt_required(role="student")
 def get_student_attendance(euid: str):
     try:
         payload = GetStudentAttendanceRequest.model_validate({"euid": euid})
@@ -198,6 +221,7 @@ def get_class_schedule(code: str):
 
 
 @bp.get("/professors/<euid>/schedule")
+@jwt_required(role="student")
 def get_professor_schedule(euid: str):
     try:
         payload = GetProfessorScheduleRequest.model_validate({"euid": euid})

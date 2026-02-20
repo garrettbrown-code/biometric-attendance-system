@@ -46,6 +46,14 @@ CREATE TABLE IF NOT EXISTS tbl_attendance (
     CONSTRAINT attendance_bool CHECK(fld_at_attended IN (0, 1))
 );
 
+CREATE TABLE IF NOT EXISTS tbl_users (
+    fld_us_id_pk INTEGER PRIMARY KEY AUTOINCREMENT,
+    fld_us_euid TEXT UNIQUE NOT NULL,
+    fld_us_role TEXT NOT NULL CHECK (fld_us_role IN ('student', 'professor')),
+    fld_us_password_hash TEXT NOT NULL,
+    fld_us_created_at TEXT NOT NULL
+);
+
 -- Helpful indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_sessions_code_date
 ON tbl_sessions(fld_se_code_fk, fld_se_date);
