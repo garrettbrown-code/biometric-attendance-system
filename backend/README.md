@@ -65,6 +65,17 @@ This project is intended as a **portfolio / educational** demonstration of backe
 
 ---
 
+## Documentation
+
+Detailed documentation:
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Authentication & RBAC](docs/AUTHENTICATION.md)
+- [API Reference](docs/API_REFERENCE.md)
+- [Security Model](docs/SECURITY_MODEL.md)
+
+---
+
 ## Initialize Database
 
 python -m app.db.init_db
