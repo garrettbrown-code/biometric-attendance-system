@@ -1,11 +1,21 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 android {
     namespace = "com.garrettbrown.biometricattendance"
     compileSdk = 35
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlin {
+        jvmToolchain(17)
+    }
 
     defaultConfig {
         applicationId = "com.garrettbrown.biometricattendance"
@@ -35,14 +45,6 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.15"
-    }
-
-    kotlinOptions {
-        jvmTarget = "17"
     }
 }
 
@@ -76,4 +78,5 @@ dependencies {
 
     // Moshi
     implementation("com.squareup.moshi:moshi-kotlin:1.15.1")
+    implementation("org.jetbrains.kotlin:kotlin-reflect:2.0.21")
 }

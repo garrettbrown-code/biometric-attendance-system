@@ -2,15 +2,22 @@ package com.garrettbrown.biometricattendance.core.auth
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
 private val Context.dataStore by preferencesDataStore(name = "auth")
 
@@ -31,6 +38,11 @@ class AuthStore(private val context: Context) {
         val Euid = stringPreferencesKey("euid")
     }
 
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    private val _sessionState = MutableStateFlow(Session())
+    val sessionState: StateFlow<Session> = _sessionState
+
     val session: Flow<Session> = context.dataStore.data.map { prefs ->
         Session(
             accessToken = prefs[Keys.Access],
@@ -38,6 +50,12 @@ class AuthStore(private val context: Context) {
             role = prefs[Keys.Role],
             euid = prefs[Keys.Euid],
         )
+    }
+
+    init {
+        scope.launch {
+            session.collect { s -> _sessionState.value = s }
+        }
     }
 
     suspend fun setSession(access: String, refresh: String, role: String, euid: String) {
@@ -60,14 +78,8 @@ class AuthStore(private val context: Context) {
 
     // For OkHttp interceptor (sync-ish usage). Avoid heavy calls.
     // This reads from DataStore once; good enough for scaffold.
-    fun sessionValue(): Session = runCatching { context.dataStore.data.map { prefs ->
-        Session(
-            accessToken = prefs[Keys.Access],
-            refreshToken = prefs[Keys.Refresh],
-            role = prefs[Keys.Role],
-            euid = prefs[Keys.Euid],
-        )
-    }.first() }.getOrElse { Session() }
+    fun sessionValue(): Session = _sessionState.value
+
 
     companion object {
         private val LocalAuth = staticCompositionLocalOf<AuthStore> {
@@ -78,7 +90,7 @@ class AuthStore(private val context: Context) {
         fun current(): AuthStore {
             // Simple singleton per app context for scaffold
             val ctx = LocalContext.current.applicationContext
-            return AuthStore(ctx)
+            return remember(ctx) { AuthStore(ctx) }
         }
     }
 }

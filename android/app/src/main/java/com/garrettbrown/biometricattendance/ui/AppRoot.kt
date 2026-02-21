@@ -28,7 +28,7 @@ fun AppRoot(
     navController: NavHostController = rememberNavController(),
 ) {
     val auth = AuthStore.current()
-    val session by auth.session.collectAsState()
+    val session by auth.sessionState.collectAsState()
 
     // If already logged in, go straight to home
     LaunchedEffect(session.isLoggedIn) {

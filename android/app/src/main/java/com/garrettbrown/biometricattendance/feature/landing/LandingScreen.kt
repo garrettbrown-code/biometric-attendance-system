@@ -11,12 +11,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import android.util.Log
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import com.garrettbrown.biometricattendance.core.auth.AuthStore
+import com.garrettbrown.biometricattendance.core.network.ApiClient
 
 @Composable
 fun LandingScreen(
     onProfessor: () -> Unit,
     onStudent: () -> Unit,
 ) {
+    val auth = AuthStore.current()
+    val api = remember { ApiClient.create(auth) }
+    val scope = rememberCoroutineScope()
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
@@ -27,5 +36,15 @@ fun LandingScreen(
 
         Button(onClick = onStudent) { Text("Student") }
         Button(onClick = onProfessor) { Text("Professor") }
+        Button(onClick = {
+            scope.launch {
+                runCatching { api.health() }
+                    .onSuccess { Log.d("HealthCheck", "OK: ${it.status} request_id=${it.request_id}") }
+                    .onFailure { Log.e("HealthCheck", "FAILED", it) }
+            }
+        }) {
+            Text("Ping Backend")
+        }
     }
+
 }
