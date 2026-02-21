@@ -148,6 +148,35 @@ def refresh():
     return jsonify({"status": "success", **tokens}), 200
 
 
+@bp.post("/classes/<code>/join-code/rotate")
+@jwt_required(role="professor")
+def rotate_join_code(code: str):
+    db = get_db()
+
+    # Verify ownership
+    if not repository.professor_exists_for_class(db, code=code, professor_euid=g.current_user):
+        return _error(403, "Forbidden")
+
+    new_code = repository.generate_join_code()
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    db.execute(
+        """
+        UPDATE tbl_class_info
+        SET fld_ci_join_code = ?, fld_ci_join_code_created_at = ?
+        WHERE fld_ci_code_pk = ?
+        """,
+        (new_code, now_iso, code),
+    )
+    db.commit()
+
+    return jsonify({
+        "status": "success",
+        "join_code": new_code,
+        "request_id": _request_id(),
+    }), 200
+
+
 @bp.post("/classes")
 @jwt_required(role="professor")
 def post_class():

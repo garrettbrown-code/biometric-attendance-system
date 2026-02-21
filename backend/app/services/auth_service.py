@@ -11,6 +11,27 @@ from app.auth.jwt_utils import create_access_token, create_refresh_token, decode
 from app.db import repository
 from app.services.face_service import save_reference_image, verify_face_match
 
+from collections import defaultdict
+from time import time
+
+_FACE_LOGIN_ATTEMPTS: dict[str, list[float]] = defaultdict(list)
+_FACE_LOGIN_WINDOW_SECONDS = 60
+_FACE_LOGIN_MAX_ATTEMPTS = 5
+
+
+def _is_rate_limited(euid: str) -> bool:
+    now = time()
+    window_start = now - _FACE_LOGIN_WINDOW_SECONDS
+
+    attempts = _FACE_LOGIN_ATTEMPTS[euid]
+    attempts[:] = [t for t in attempts if t >= window_start]
+
+    if len(attempts) >= _FACE_LOGIN_MAX_ATTEMPTS:
+        return True
+
+    attempts.append(now)
+    return False
+
 
 def issue_token_pair(*, subject: str, role: str, cfg: Config, db: sqlite3.Connection) -> dict[str, str]:
     """
@@ -191,7 +212,12 @@ def enroll_student_with_join_code(
     photo_b64: str,
 ) -> dict[str, str] | None:
     # 1) join code must match class
-    if not repository.verify_join_code(db, code=code, join_code=join_code):
+    if not repository.verify_join_code(
+        db,
+        code=code,
+        join_code=join_code,
+        ttl_hours=cfg.join_code_ttl_hours,
+    ):
         return None
 
     # 2) ensure student user exists (no password login, but tbl_users requires a hash)
@@ -227,18 +253,48 @@ def face_login_student(
     euid: str,
     photo_b64: str,
 ) -> dict[str, str] | None:
-    # Must exist as student user
-    cur = db.execute(
-        "SELECT fld_us_role AS role FROM tbl_users WHERE fld_us_euid = ? LIMIT 1",
-        (euid,),
-    )
-    row = cur.fetchone()
-    if not row or row["role"] != "student":
+    """
+    Authenticates a student via facial recognition.
+    Applies basic in-memory rate limiting to prevent brute-force attempts.
+    Returns token pair on success, None on failure.
+    """
+
+    # Rate limiting check
+    if _is_rate_limited(euid):
         return None
 
+    # 1 Ensure student user exists
+    row = db.execute(
+        """
+        SELECT fld_us_role
+        FROM tbl_users
+        WHERE fld_us_euid = ?
+        LIMIT 1
+        """,
+        (euid,),
+    ).fetchone()
+
+    if not row or row["fld_us_role"] != "student":
+        return None
+
+    # 2 Ensure reference image exists
     ref_path = cfg.user_data_dir / "Student" / euid / "reference_image.jpg"
-    result = verify_face_match(submitted_photo_b64=photo_b64, reference_image_path=ref_path)
+    if not ref_path.exists():
+        return None
+
+    # 3 Perform face match
+    result = verify_face_match(
+        submitted_photo_b64=photo_b64,
+        reference_image_path=ref_path,
+    )
+
     if result.status != "success":
         return None
 
-    return issue_token_pair(subject=euid, role="student", cfg=cfg, db=db)
+    # 4 Issue token pair
+    return issue_token_pair(
+        subject=euid,
+        role="student",
+        cfg=cfg,
+        db=db,
+    )

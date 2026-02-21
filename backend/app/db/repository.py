@@ -61,17 +61,31 @@ def get_join_code(db: sqlite3.Connection, *, code: str) -> dict[str, Any] | None
     row = cur.fetchone()
     return dict(row) if row else None
 
-def verify_join_code(db: sqlite3.Connection, *, code: str, join_code: str) -> bool:
-    cur = db.execute(
-        """
-        SELECT 1
-        FROM tbl_class_info
-        WHERE fld_ci_code_pk = ? AND fld_ci_join_code = ?
-        LIMIT 1
-        """,
-        (code, join_code),
-    )
-    return cur.fetchone() is not None
+
+def verify_join_code(db: sqlite3.Connection, *, code: str, join_code: str, ttl_hours: int) -> bool:
+     cur = db.execute(
+         """
+         SELECT fld_ci_join_code, fld_ci_join_code_created_at
+         FROM tbl_class_info
+         WHERE fld_ci_code_pk = ?
+         """,
+         (code,),
+     )
+     row = cur.fetchone()
+     if not row:
+         return False
+
+     if row["fld_ci_join_code"] != join_code:
+         return False
+
+     created_at = datetime.fromisoformat(row["fld_ci_join_code_created_at"])
+     if created_at.tzinfo is None:
+         created_at = created_at.replace(tzinfo=timezone.utc)
+
+     expires_at = created_at + timedelta(hours=ttl_hours)
+
+     return datetime.now(timezone.utc) <= expires_at
+
 
 def enroll_student(db: sqlite3.Connection, *, code: str, student_euid: str) -> None:
     db.execute(
@@ -81,6 +95,7 @@ def enroll_student(db: sqlite3.Connection, *, code: str, student_euid: str) -> N
         """,
         (code, student_euid),
     )
+
 
 # -------------------------
 # Student enrollment

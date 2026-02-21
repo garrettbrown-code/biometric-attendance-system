@@ -44,6 +44,9 @@ class Config:
     jwt_exp_minutes: int = _get_env_int("JWT_EXP_MINUTES", 60)
     jwt_refresh_exp_days: int = _get_env_int("JWT_REFRESH_EXP_DAYS", 7)
 
+    # Join code
+    join_code_ttl_hours: int = _get_env_int("JOIN_CODE_TTL_HOURS", 168)  # 7 days
+
     # Face recognition knobs (optional)
     # face_tolerance: float = float(os.getenv("FACE_TOLERANCE", "0.6"))
 
