@@ -63,28 +63,49 @@ def get_join_code(db: sqlite3.Connection, *, code: str) -> dict[str, Any] | None
 
 
 def verify_join_code(db: sqlite3.Connection, *, code: str, join_code: str, ttl_hours: int) -> bool:
-     cur = db.execute(
-         """
-         SELECT fld_ci_join_code, fld_ci_join_code_created_at
-         FROM tbl_class_info
-         WHERE fld_ci_code_pk = ?
-         """,
-         (code,),
-     )
-     row = cur.fetchone()
-     if not row:
-         return False
+    cur = db.execute(
+        """
+        SELECT fld_ci_join_code, fld_ci_join_code_created_at
+        FROM tbl_class_info
+        WHERE fld_ci_code_pk = ?
+        """,
+        (code,),
+    )
+    row = cur.fetchone()
+    if not row:
+        return False
 
-     if row["fld_ci_join_code"] != join_code:
-         return False
+    if row["fld_ci_join_code"] != join_code:
+        return False
 
-     created_at = datetime.fromisoformat(row["fld_ci_join_code_created_at"])
-     if created_at.tzinfo is None:
-         created_at = created_at.replace(tzinfo=timezone.utc)
+    try:
+        created_at = datetime.fromisoformat(row["fld_ci_join_code_created_at"])
+    except Exception:
+        return False
+    
+    if created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
 
-     expires_at = created_at + timedelta(hours=ttl_hours)
+    expires_at = created_at + timedelta(hours=ttl_hours)
 
-     return datetime.now(timezone.utc) <= expires_at
+    return datetime.now(timezone.utc) <= expires_at
+
+
+def rotate_join_code(db: sqlite3.Connection, *, code: str) -> dict[str, str]:
+    """
+    Rotates a class join code and returns the new code + timestamp.
+    """
+    new_code = generate_join_code()
+    now_iso = datetime.now(timezone.utc).isoformat()
+    db.execute(
+        """
+        UPDATE tbl_class_info
+        SET fld_ci_join_code = ?, fld_ci_join_code_created_at = ?
+        WHERE fld_ci_code_pk = ?
+        """,
+        (new_code, now_iso, code),
+    )
+    return {"join_code": new_code, "join_code_created_at": now_iso}
 
 
 def enroll_student(db: sqlite3.Connection, *, code: str, student_euid: str) -> None:

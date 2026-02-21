@@ -109,9 +109,28 @@ def _openapi_spec() -> dict[str, Any]:
                     "properties": {
                         "status": {"type": "string", "example": "success"},
                         "sessions_created": {"type": "integer", "example": 10},
+                        "join_code": {"type": "string", "example": "A1B2C3D4"},
                         "request_id": {"type": "string"},
                     },
                     "required": ["status", "sessions_created"],
+                },
+                "StudentEnrollRequest": {
+                    "type": "object",
+                    "properties": {
+                        "euid": {"type": "string", "example": "stu1234"},
+                        "code": {"type": "string", "example": "csce_4900_500"},
+                        "join_code": {"type": "string", "example": "A1B2C3D4"},
+                        "photo": {"type": "string", "description": "Base64-encoded image"},
+                    },
+                    "required": ["euid", "code", "join_code", "photo"],
+                },
+                "FaceLoginRequest": {
+                    "type": "object",
+                    "properties": {
+                        "euid": {"type": "string", "example": "stu1234"},
+                        "photo": {"type": "string", "description": "Base64-encoded image"},
+                    },
+                    "required": ["euid", "photo"],
                 },
                 "AddAttendanceRequest": {
                     "type": "object",
@@ -224,6 +243,36 @@ def _openapi_spec() -> dict[str, Any]:
                     },
                 }
             },
+            "/auth/enroll": {
+                "post": {
+                    "tags": ["Auth"],
+                    "summary": "Student self-enroll using join code + reference face; returns tokens",
+                    "requestBody": {
+                        "required": True,
+                        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/StudentEnrollRequest"}}},
+                    },
+                    "responses": {
+                        "200": {"description": "Tokens issued", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/LoginResponse"}}}},
+                        "400": {"description": "Validation error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}},
+                        "401": {"description": "Invalid join code / enrollment failed", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}},
+                    },
+                }
+            },
+            "/auth/face-login": {
+                "post": {
+                    "tags": ["Auth"],
+                    "summary": "Student face login (no password); returns tokens",
+                    "requestBody": {
+                        "required": True,
+                        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/FaceLoginRequest"}}},
+                    },
+                    "responses": {
+                        "200": {"description": "Tokens issued", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/LoginResponse"}}}},
+                        "400": {"description": "Validation error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}},
+                        "401": {"description": "Face login failed", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}},
+                    },
+                }
+            },
             "/classes": {
                 "post": {
                     "tags": ["Classes"],
@@ -242,6 +291,35 @@ def _openapi_spec() -> dict[str, Any]:
                         "401": {"description": "Missing/invalid token", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}},
                         "403": {"description": "Forbidden", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}},
                         "409": {"description": "Conflict", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}},
+                    },
+                }
+            },
+            "/classes/{code}/join-code/rotate": {
+                "post": {
+                    "tags": ["Classes"],
+                    "summary": "Rotate a class join code (professor only, must own class)",
+                    "security": [{"bearerAuth": []}],
+                    "parameters": [
+                        {"name": "code", "in": "path", "required": True, "schema": {"type": "string"}}
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Rotated",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "status": {"type": "string", "example": "success"},
+                                            "join_code": {"type": "string", "example": "Z9Y8X7W6"},
+                                            "request_id": {"type": "string"},
+                                        },
+                                    }
+                                }
+                            },
+                        },
+                        "401": {"description": "Missing/invalid token", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}},
+                        "403": {"description": "Forbidden", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}},
                     },
                 }
             },

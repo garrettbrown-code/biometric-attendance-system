@@ -318,6 +318,30 @@ def post_attendance():
     return _error(400, result.error or "Attendance rejected")
 
 
+@bp.post("/classes/<code>/join-code/rotate")
+@jwt_required(role="professor")
+def rotate_class_join_code(code: str):
+    db = get_db()
+
+    # professor must own the class
+    if not repository.professor_exists_for_class(db, code=code, professor_euid=g.current_user):
+        return _error(403, "Forbidden")
+
+    rotated = repository.rotate_join_code(db, code=code)
+    db.commit()
+
+    return (
+        jsonify(
+            {
+                "status": "success",
+                "join_code": rotated["join_code"],
+                "request_id": _request_id(),
+            }
+        ),
+        200,
+    )
+
+
 @bp.post("/students/me/classes")
 @jwt_required(role="student")
 def enroll_in_class():
