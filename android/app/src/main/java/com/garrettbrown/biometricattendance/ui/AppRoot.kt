@@ -12,6 +12,7 @@ import com.garrettbrown.biometricattendance.core.auth.AuthStore
 import com.garrettbrown.biometricattendance.feature.landing.LandingScreen
 import com.garrettbrown.biometricattendance.feature.professor.ProfessorLoginScreen
 import com.garrettbrown.biometricattendance.feature.student.StudentEnrollScreen
+import com.garrettbrown.biometricattendance.feature.student.StudentFaceLoginScreen
 import com.garrettbrown.biometricattendance.feature.home.HomeScreen
 import com.garrettbrown.biometricattendance.feature.settings.SettingsScreen
 
@@ -19,6 +20,7 @@ object Routes {
     const val Landing = "landing"
     const val ProfessorLogin = "prof_login"
     const val StudentEnroll = "student_enroll"
+    const val StudentFaceLogin = "student_face_login"
     const val Home = "home"
     const val Settings = "settings"
 }
@@ -43,7 +45,8 @@ fun AppRoot(
         composable(Routes.Landing) {
             LandingScreen(
                 onProfessor = { navController.navigate(Routes.ProfessorLogin) },
-                onStudent = { navController.navigate(Routes.StudentEnroll) },
+                onStudentEnroll = { navController.navigate(Routes.StudentEnroll) },
+                onStudentFaceLogin = { navController.navigate(Routes.StudentFaceLogin) },
             )
         }
         composable(Routes.ProfessorLogin) {
@@ -54,6 +57,12 @@ fun AppRoot(
         }
         composable(Routes.StudentEnroll) {
             StudentEnrollScreen(
+                onSuccess = { navController.navigate(Routes.Home) { popUpTo(Routes.Landing) { inclusive = true } } },
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable(Routes.StudentFaceLogin) {
+            StudentFaceLoginScreen(
                 onSuccess = { navController.navigate(Routes.Home) { popUpTo(Routes.Landing) { inclusive = true } } },
                 onBack = { navController.popBackStack() },
             )

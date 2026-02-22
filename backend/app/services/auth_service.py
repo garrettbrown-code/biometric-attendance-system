@@ -14,6 +14,7 @@ from app.services.face_service import save_reference_image, verify_face_match
 from collections import defaultdict
 from time import time
 
+
 _FACE_LOGIN_ATTEMPTS: dict[str, list[float]] = defaultdict(list)
 _FACE_LOGIN_WINDOW_SECONDS = 60
 _FACE_LOGIN_MAX_ATTEMPTS = 5

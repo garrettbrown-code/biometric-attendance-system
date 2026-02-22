@@ -21,7 +21,8 @@ import com.garrettbrown.biometricattendance.core.network.ApiClient
 @Composable
 fun LandingScreen(
     onProfessor: () -> Unit,
-    onStudent: () -> Unit,
+    onStudentEnroll: () -> Unit,
+    onStudentFaceLogin: () -> Unit,
 ) {
     val auth = AuthStore.current()
     val api = remember { ApiClient.create(auth) }
@@ -34,7 +35,8 @@ fun LandingScreen(
         Text("Biometric Attendance", style = MaterialTheme.typography.headlineMedium)
         Text("Choose your role to continue.")
 
-        Button(onClick = onStudent) { Text("Student") }
+        Button(onClick = onStudentEnroll) { Text("Student: Enroll") }
+        Button (onClick = onStudentFaceLogin) { Text("Student: Face Login") }
         Button(onClick = onProfessor) { Text("Professor") }
         Button(onClick = {
             scope.launch {
