@@ -27,13 +27,36 @@ def test_add_attendance_class_missing(mock_get_class_by_code, tmp_path: Path) ->
     assert result.status == "error"
     assert result.error == "Class does not exist"
 
+@patch("app.services.attendance_service.repository.student_is_enrolled")
+@patch("app.services.attendance_service.repository.get_class_by_code")
+def test_add_attendance_rejected_when_not_enrolled(
+    mock_get_class_by_code,
+    mock_is_enrolled,
+    tmp_path: Path,
+) -> None:
+    mock_get_class_by_code.return_value = {"lat": 33.0, "lon": -97.0}
+    mock_is_enrolled.return_value = False
 
+    result = add_attendance(
+        db=MagicMock(),
+        code="csce_4900_500",
+        euid="gdb2356",
+        student_location=(33.0, -97.0),
+        submitted_photo_b64="abc",
+        user_data_dir=tmp_path,
+    )
+    assert result.status == "error"
+    assert result.error == "Not enrolled in class"
+
+
+@patch("app.services.attendance_service.repository.student_is_enrolled")
 @patch("app.services.attendance_service.repository.get_session_for_date")
 @patch("app.services.attendance_service.repository.get_class_by_code")
 def test_add_attendance_no_class_today(
-    mock_get_class_by_code, mock_get_session, tmp_path: Path
+    mock_get_class_by_code, mock_get_session, mock_is_enrolled, tmp_path: Path
 ) -> None:
     mock_get_class_by_code.return_value = {"lat": 33.0, "lon": -97.0}
+    mock_is_enrolled.return_value = True
     mock_get_session.return_value = None
 
     result = add_attendance(
@@ -51,17 +74,20 @@ def test_add_attendance_no_class_today(
 @patch("app.services.attendance_service.verify_face_match")
 @patch("app.services.attendance_service.distance_feet")
 @patch("app.services.attendance_service.repository.upsert_attendance")
+@patch("app.services.attendance_service.repository.student_is_enrolled")
 @patch("app.services.attendance_service.repository.get_session_for_date")
 @patch("app.services.attendance_service.repository.get_class_by_code")
 def test_add_attendance_success(
     mock_get_class_by_code,
     mock_get_session,
+    mock_is_enrolled,
     mock_upsert,
     mock_distance,
     mock_face,
     tmp_path: Path,
 ) -> None:
     mock_get_class_by_code.return_value = {"lat": 33.0, "lon": -97.0}
+    mock_is_enrolled.return_value = True
 
     # Put session time at "now" so it's within time window
     now = datetime.now()
@@ -87,12 +113,14 @@ def test_add_attendance_success(
     mock_upsert.assert_called_once()
 
 
+@patch("app.services.attendance_service.repository.student_is_enrolled")
 @patch("app.services.attendance_service.repository.get_session_for_date")
 @patch("app.services.attendance_service.repository.get_class_by_code")
 def test_add_attendance_outside_time_window(
-    mock_get_class_by_code, mock_get_session, tmp_path: Path
+    mock_get_class_by_code, mock_get_session, mock_is_enrolled, tmp_path: Path
 ) -> None:
     mock_get_class_by_code.return_value = {"lat": 33.0, "lon": -97.0}
+    mock_is_enrolled.return_value = True
 
     # Session time far in the past (over 30 min)
     mock_get_session.return_value = SessionRow(
@@ -117,16 +145,19 @@ def test_add_attendance_outside_time_window(
 
 @patch("app.services.attendance_service.verify_face_match")
 @patch("app.services.attendance_service.distance_feet")
+@patch("app.services.attendance_service.repository.student_is_enrolled")
 @patch("app.services.attendance_service.repository.get_session_for_date")
 @patch("app.services.attendance_service.repository.get_class_by_code")
 def test_add_attendance_too_far(
     mock_get_class_by_code,
     mock_get_session,
+    mock_is_enrolled,
     mock_distance,
     mock_face,
     tmp_path: Path,
 ) -> None:
     mock_get_class_by_code.return_value = {"lat": 33.0, "lon": -97.0}
+    mock_is_enrolled.return_value = True
 
     now = datetime.now()
     mock_get_session.return_value = SessionRow(

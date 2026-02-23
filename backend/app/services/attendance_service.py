@@ -35,13 +35,17 @@ def add_attendance(
     if class_info is None:
         return AttendanceResult(status="error", error="Class does not exist")
 
-    # 2) Session exists today
+    # 2) Enrollment check
+    if not repository.student_is_enrolled(db, student_euid=euid, code=code):
+        return AttendanceResult(status="error", error="Not enrolled in class")
+
+    # 3) Session exists today
     today = datetime.now().date().strftime("%Y-%m-%d")
     session = repository.get_session_for_date(db, code=code, on_date=today)
     if session is None:
         return AttendanceResult(status="error", error="No class on date")
 
-    # 3) Time window check
+    # 4) Time window check
     session_dt = datetime.strptime(
         f"{session.session_date} {session.session_time}",
         "%Y-%m-%d %H:%M:%S",
@@ -51,13 +55,13 @@ def add_attendance(
     if diff_seconds > time_window_minutes * 60:
         return AttendanceResult(status="error", error="Outside time range")
 
-    # 4) Distance check
+    # 5) Distance check
     class_location = (float(class_info["lat"]), float(class_info["lon"]))
     dist = distance_feet(student_location, class_location)
     if dist > max_distance_feet:
         return AttendanceResult(status="error", error="Too far from class")
 
-    # 5) Face match check
+    # 6) Face match check
     reference_path = user_data_dir / "Student" / euid / "reference_image.jpg"
     face_result = verify_face_match(
         submitted_photo_b64=submitted_photo_b64,
@@ -69,6 +73,6 @@ def add_attendance(
             status="error", error=face_result.error or "Face verification failed"
         )
 
-    # 6) Persist
+    # 7) Persist
     repository.upsert_attendance(db, session_id=session.id, student_euid=euid, attended=1)
     return AttendanceResult(status="success")
