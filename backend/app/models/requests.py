@@ -146,6 +146,19 @@ class GetProfessorClassCodesRequest(BaseModel):
     @classmethod
     def _euid(cls, v: str) -> str:
         return validate_euid(v)
+    
+
+class PaginationRequest(BaseModel):
+    """
+    Shared pagination query params.
+    - page is 1-based
+    """
+    page: int = Field(1, ge=1, description="1-based page number")
+    page_size: int = Field(50, ge=1, le=100, description="items per page (max 100)")
+
+    @property
+    def offset(self) -> int:
+        return (self.page - 1) * self.page_size
 
 
 # Optional: user enrollment/photo management later

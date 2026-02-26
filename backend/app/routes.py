@@ -21,6 +21,7 @@ from app.models.requests import (
     GetProfessorClassCodesRequest,
     GetProfessorScheduleRequest,
     GetStudentAttendanceRequest,
+    PaginationRequest,
     StudentEnrollRequest,
 )
 from app.services.attendance_service import add_attendance
@@ -415,6 +416,44 @@ def get_professor_schedule(euid: str):
     return jsonify({"status": "success", "classes": rows, "request_id": _request_id()}), 200
 
 
+@bp.get("/classes/me")
+@jwt_required(role="professor")
+def get_my_class_codes():
+    """
+    New (preferred) route for professor-owned class codes.
+    Supports pagination via query params:
+      /classes/me?page=1&page_size=50
+    """
+    try:
+        payload = PaginationRequest.model_validate(dict(request.args))
+    except ValidationError as e:
+        return _validation_error(e)
+
+    db = get_db()
+    codes, total = repository.get_professor_class_codes_paginated(
+        db,
+        professor_euid=g.current_user,
+        limit=payload.page_size,
+        offset=payload.offset,
+    )
+    total_pages = (total + payload.page_size - 1) // payload.page_size if payload.page_size else 0
+
+    return (
+        jsonify(
+            {
+                "status": "success",
+                "classes": codes,
+                "page": payload.page,
+                "page_size": payload.page_size,
+                "total": total,
+                "total_pages": total_pages,
+                "request_id": _request_id(),
+            }
+        ),
+        200,
+    )
+
+
 @bp.get("/professors/<euid>/classes")
 @jwt_required(role="professor")
 def get_professor_class_codes(euid: str):
@@ -425,6 +464,10 @@ def get_professor_class_codes(euid: str):
     except ValidationError as e:
         return _validation_error(e)
 
-    db = get_db()
-    codes = repository.get_professor_class_codes(db, professor_euid=payload.euid)
-    return jsonify({"status": "success", "codes": codes, "request_id": _request_id()}), 200
+    # Backward-compatible alias.
+    # Prefer: GET /classes/me?page=1&page_size=50
+    resp = get_my_class_codes()
+    # Add a light deprecation signal for clients.
+    resp[0].headers["Deprecation"] = "true"
+    resp[0].headers["Sunset"] = "2026-02-26"
+    return resp

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+import math
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -466,3 +467,36 @@ def get_professor_class_codes(db: sqlite3.Connection, *, professor_euid: str) ->
         (professor_euid,),
     )
     return [row["code"] for row in cur.fetchall()]
+
+
+def get_professor_class_codes_paginated(
+    db: sqlite3.Connection,
+    *,
+    professor_euid: str,
+    limit: int,
+    offset: int,
+) -> tuple[list[str], int]:
+    """
+    Returns (codes, total_count) for classes owned by professor.
+    """
+    total_row = db.execute(
+        """
+        SELECT COUNT(1) AS cnt
+        FROM tbl_class_info
+        WHERE fld_ci_euid = ?
+        """,
+        (professor_euid,),
+    ).fetchone()
+    total = int(total_row["cnt"]) if total_row else 0
+
+    cur = db.execute(
+        """
+        SELECT fld_ci_code_pk AS code
+        FROM tbl_class_info
+        WHERE fld_ci_euid = ?
+        ORDER BY fld_ci_code_pk ASC
+        LIMIT ? OFFSET ?
+        """,
+        (professor_euid, limit, offset),
+    )
+    return [row["code"] for row in cur.fetchall()], total
