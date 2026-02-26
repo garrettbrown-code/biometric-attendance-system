@@ -4,7 +4,7 @@ import logging
 import json
 import uuid
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from flask import Blueprint, current_app, g, jsonify, request
 from pydantic import ValidationError
 
@@ -21,6 +21,7 @@ from app.models.requests import (
     GetProfessorClassCodesRequest,
     GetProfessorScheduleRequest,
     GetStudentAttendanceRequest,
+    GetUpcomingSessionsRequest,
     PaginationRequest,
     StudentEnrollRequest,
 )
@@ -375,6 +376,59 @@ def get_student_attendance(euid: str):
     db = get_db()
     rows = repository.get_student_attendance(db, student_euid=payload.euid)
     return jsonify({"status": "success", "attendance": rows, "request_id": _request_id()}), 200
+
+
+@bp.get("/students/me/sessions/upcoming")
+@jwt_required(role="student")
+def get_my_upcoming_sessions():
+    """
+    Upcoming sessions for enrolled classes.
+    Query params:
+      - from_date (YYYY-MM-DD, inclusive) default=today
+      - to_date   (YYYY-MM-DD, inclusive) default=today+30 days
+      - page (1-based) default=1
+      - page_size default=50, max=100
+    """
+    today = datetime.now().date()
+    default_from = today.strftime("%Y-%m-%d")
+    default_to = (today + timedelta(days=30)).strftime("%Y-%m-%d")
+
+    raw = dict(request.args)
+    raw.setdefault("from_date", default_from)
+    raw.setdefault("to_date", default_to)
+
+    try:
+        payload = GetUpcomingSessionsRequest.model_validate(raw)
+    except ValidationError as e:
+        return _validation_error(e)
+
+    db = get_db()
+    rows, total = repository.get_upcoming_sessions_for_student_paginated(
+        db,
+        student_euid=g.current_user,
+        from_date=payload.from_date,
+        to_date=payload.to_date,
+        limit=payload.page_size,
+        offset=payload.offset,
+    )
+    total_pages = (total + payload.page_size - 1) // payload.page_size if payload.page_size else 0
+
+    return (
+        jsonify(
+            {
+                "status": "success",
+                "sessions": rows,
+                "from_date": payload.from_date,
+                "to_date": payload.to_date,
+                "page": payload.page,
+                "page_size": payload.page_size,
+                "total": total,
+                "total_pages": total_pages,
+                "request_id": _request_id(),
+            }
+        ),
+        200,
+    )
 
 
 @bp.get("/classes/<code>/attendance")

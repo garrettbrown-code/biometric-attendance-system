@@ -393,6 +393,60 @@ def upsert_attendance(
 
 
 # -------------------------
+# Student upcoming sessions
+# -------------------------
+
+def get_upcoming_sessions_for_student_paginated(
+    db: sqlite3.Connection,
+    *,
+    student_euid: str,
+    from_date: str,
+    to_date: str,
+    limit: int,
+    offset: int,
+) -> tuple[list[dict[str, Any]], int]:
+    """
+    Returns (rows, total_count) of sessions in [from_date, to_date] for classes
+    the student is enrolled in.
+    """
+    total_row = db.execute(
+        """
+        SELECT COUNT(1) AS cnt
+        FROM tbl_students st
+        JOIN tbl_sessions se ON st.fld_st_code_fk = se.fld_se_code_fk
+        WHERE st.fld_st_euid = ?
+          AND se.fld_se_date >= ?
+          AND se.fld_se_date <= ?
+        """,
+        (student_euid, from_date, to_date),
+    ).fetchone()
+    total = int(total_row["cnt"]) if total_row else 0
+
+    cur = db.execute(
+        """
+        SELECT
+          se.fld_se_id_pk AS session_id,
+          se.fld_se_code_fk AS code,
+          se.fld_se_date AS session_date,
+          se.fld_se_time AS session_time,
+          i.fld_ci_lat AS class_lat,
+          i.fld_ci_lon AS class_lon,
+          i.fld_ci_euid AS professor_euid
+        FROM tbl_students st
+        JOIN tbl_sessions se ON st.fld_st_code_fk = se.fld_se_code_fk
+        JOIN tbl_class_info i ON i.fld_ci_code_pk = se.fld_se_code_fk
+        WHERE st.fld_st_euid = ?
+          AND se.fld_se_date >= ?
+          AND se.fld_se_date <= ?
+        ORDER BY se.fld_se_date ASC, se.fld_se_time ASC, se.fld_se_code_fk ASC
+        LIMIT ? OFFSET ?
+        """,
+        (student_euid, from_date, to_date, limit, offset),
+    )
+    return [dict(row) for row in cur.fetchall()], total
+
+
+# -------------------------
 # Query endpoints
 # -------------------------
 

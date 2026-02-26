@@ -16,6 +16,28 @@ from app.models.validation import (
 )
 
 
+class GetUpcomingSessionsRequest(BaseModel):
+    """
+    Query params for upcoming sessions.
+    - page is 1-based
+    - page_size is capped
+    """
+    from_date: str = Field(..., description="YYYY-MM-DD (inclusive)")
+    to_date: str = Field(..., description="YYYY-MM-DD (inclusive)")
+    page: int = Field(1, ge=1)
+    page_size: int = Field(50, ge=1, le=100)
+
+    @field_validator("from_date", "to_date")
+    @classmethod
+    def _date(cls, v: str) -> str:
+        return validate_date_yyyymmdd(v)
+
+    @property
+    def offset(self) -> int:
+        return (self.page - 1) * self.page_size
+
+
+
 class AddClassRequest(BaseModel):
     code: str = Field(..., description="abcd_1234_123")
     euid: str = Field(..., description="abc1234 (professor EUID)")
