@@ -545,12 +545,19 @@ def get_professor_class_codes_paginated(
 
     cur = db.execute(
         """
-        SELECT fld_ci_code_pk AS code
+        SELECT
+            fld_ci_code_pk AS code,
+            fld_ci_join_code AS join_code,
+            fld_ci_join_code_created_at AS join_code_created_at,
+            fld_ci_lat AS lat,
+            fld_ci_lon AS lon,
+            fld_ci_start_date AS start_date,
+            fld_ci_end_date AS end_date
         FROM tbl_class_info
         WHERE fld_ci_euid = ?
-        ORDER BY fld_ci_code_pk ASC
+        ORDER BY fld_ci_start_date ASC, fld_ci_code_pk ASC
         LIMIT ? OFFSET ?
         """,
         (professor_euid, limit, offset),
     )
-    return [row["code"] for row in cur.fetchall()], total
+    return [dict(row) for row in cur.fetchall()], total
