@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import com.garrettbrown.biometricattendance.core.auth.AuthStore
 import com.garrettbrown.biometricattendance.core.model.LoginRequest
 import com.garrettbrown.biometricattendance.core.network.ApiClient
+import com.garrettbrown.biometricattendance.core.network.safeApiCall
 import kotlinx.coroutines.launch
 
 @Composable
@@ -49,7 +50,7 @@ fun ProfessorLoginScreen(
                 error = null
                 scope.launch {
                     runCatching {
-                        api.login(LoginRequest(euid = euid.trim(), password = password))
+                        safeApiCall { api.login(LoginRequest(euid = euid.trim(), password = password)) }
                     }.onSuccess { resp ->
                         auth.setSession(
                             access = resp.access_token,

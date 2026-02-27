@@ -26,6 +26,7 @@ import com.garrettbrown.biometricattendance.core.auth.AuthStore
 import com.garrettbrown.biometricattendance.core.camera.FrontCameraCapture
 import com.garrettbrown.biometricattendance.core.model.StudentEnrollRequest
 import com.garrettbrown.biometricattendance.core.network.ApiClient
+import com.garrettbrown.biometricattendance.core.network.safeApiCall
 import kotlinx.coroutines.launch
 
 @Composable
@@ -122,14 +123,11 @@ fun StudentEnrollScreen(
                 error = null
                 scope.launch {
                     runCatching {
-                        api.enroll(
-                            StudentEnrollRequest(
-                                euid = euid.trim(),
-                                code = classCode.trim(),
-                                join_code = joinCode.trim(),
-                                photo = photoB64!!.trim(),
-                            )
-                        )
+                        val photo = photoB64?.trim()
+                        if (photo.isNullOrBlank()) {
+                            throw IllegalStateException("Please take a photo first")
+                        }
+                        safeApiCall { api.enroll(StudentEnrollRequest(euid = euid.trim(), code = classCode.trim(), join_code = joinCode.trim(), photo = photo)) }
                     }.onSuccess { resp ->
                         auth.setSession(
                             access = resp.access_token,

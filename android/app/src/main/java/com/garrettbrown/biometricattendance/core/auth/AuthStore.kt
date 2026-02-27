@@ -5,21 +5,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
-
-private val Context.dataStore by preferencesDataStore(name = "auth")
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 
 data class Session(
     val accessToken: String? = null,
@@ -32,48 +21,67 @@ data class Session(
 
 class AuthStore(private val context: Context) {
     private object Keys {
-        val Access = stringPreferencesKey("access_token")
-        val Refresh = stringPreferencesKey("refresh_token")
-        val Role = stringPreferencesKey("role")
-        val Euid = stringPreferencesKey("euid")
+        const val Access = "access_token"
+        const val Refresh = "refresh_token"
+        const val Role = "role"
+        const val Euid = "euid"
     }
-
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val _sessionState = MutableStateFlow(Session())
     val sessionState: StateFlow<Session> = _sessionState
 
-    val session: Flow<Session> = context.dataStore.data.map { prefs ->
-        Session(
-            accessToken = prefs[Keys.Access],
-            refreshToken = prefs[Keys.Refresh],
-            role = prefs[Keys.Role],
-            euid = prefs[Keys.Euid],
+    private val prefs by lazy {
+        val masterKey = MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+
+        EncryptedSharedPreferences.create(
+            context,
+            "secure_auth",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
         )
     }
 
     init {
-        scope.launch {
-            session.collect { s -> _sessionState.value = s }
-        }
+        // load once
+        _sessionState.value = Session(
+            accessToken = prefs.getString(Keys.Access, null),
+            refreshToken = prefs.getString(Keys.Refresh, null),
+            role = prefs.getString(Keys.Role, null),
+            euid = prefs.getString(Keys.Euid, null),
+        )
     }
 
-    suspend fun setSession(access: String, refresh: String, role: String, euid: String) {
-        context.dataStore.edit { prefs ->
-            prefs[Keys.Access] = access
-            prefs[Keys.Refresh] = refresh
-            prefs[Keys.Role] = role
-            prefs[Keys.Euid] = euid
-        }
+    fun setSession(access: String, refresh: String, role: String, euid: String) {
+        prefs.edit()
+            .putString(Keys.Access, access)
+            .putString(Keys.Refresh, refresh)
+            .putString(Keys.Role, role)
+            .putString(Keys.Euid, euid)
+            .apply()
+        _sessionState.value = Session(access, refresh, role ,euid)
     }
 
-    suspend fun clear() {
-        context.dataStore.edit { prefs ->
-            prefs.remove(Keys.Access)
-            prefs.remove(Keys.Refresh)
-            prefs.remove(Keys.Role)
-            prefs.remove(Keys.Euid)
-        }
+    fun updateTokens(access: String, refresh: String) {
+        // Keep role/euid as is
+        val current = _sessionState.value
+        prefs.edit()
+            .putString(Keys.Access, access)
+            .putString(Keys.Refresh, refresh)
+            .apply()
+        _sessionState.value = current.copy(accessToken = access, refreshToken = refresh)
+    }
+
+    fun clear() {
+        prefs.edit()
+            .remove(Keys.Access)
+            .remove(Keys.Refresh)
+            .remove(Keys.Role)
+            .remove(Keys.Euid)
+            .apply()
+        _sessionState.value = Session()
     }
 
     // For OkHttp interceptor (sync-ish usage). Avoid heavy calls.

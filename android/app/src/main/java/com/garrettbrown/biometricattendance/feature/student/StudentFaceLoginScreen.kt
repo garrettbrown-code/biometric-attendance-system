@@ -25,6 +25,7 @@ import com.garrettbrown.biometricattendance.core.auth.AuthStore
 import com.garrettbrown.biometricattendance.core.camera.FrontCameraCapture
 import com.garrettbrown.biometricattendance.core.model.FaceLoginRequest
 import com.garrettbrown.biometricattendance.core.network.ApiClient
+import com.garrettbrown.biometricattendance.core.network.safeApiCall
 import kotlinx.coroutines.launch
 
 @Composable
@@ -89,12 +90,11 @@ fun StudentFaceLoginScreen(
                 error = null
                 scope.launch {
                     runCatching {
-                        api.faceLogin(
-                            FaceLoginRequest(
-                                euid = euid.trim(),
-                                photo = photoB64!!.trim(),
-                            )
-                        )
+                        val photo = photoB64?.trim()
+                        if (photo.isNullOrBlank()) {
+                            throw IllegalStateException("Please take a photo first")
+                        }
+                        safeApiCall { api.faceLogin(FaceLoginRequest(euid = euid.trim(), photo = photo)) }
                     }.onSuccess { resp ->
                         auth.setSession(
                             access = resp.access_token,

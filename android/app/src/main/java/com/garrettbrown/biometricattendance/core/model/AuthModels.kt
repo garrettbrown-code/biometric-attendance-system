@@ -5,6 +5,10 @@ data class LoginRequest(
     val password: String,
 )
 
+data class RefreshRequest(
+    val refresh_token: String,
+)
+
 data class StudentEnrollRequest(
     val euid: String,
     val code: String,
